@@ -1,6 +1,8 @@
 import socket
+import asyncore
 import json
 import re
+import struct
 from subprocess import Popen, check_output, PIPE, run
 import argparse
 from pathlib import Path
@@ -37,6 +39,7 @@ def reg(dic):
     result["total_memory"] = re.search(r'([0-9]+) K total memory', dic["ram"]).group(1)
     result["used_memory"] = re.search(r'([0-9]+) K used memory', dic["ram"]).group(1)
     result["free_memory"] = re.search(r'([0-9]+) K free memory', dic["ram"]).group(1)
+    result["hostname"] = dic["host"]
     disks = {}
     for i, m in enumerate(re.findall(r'([^ \\]+)[ ]+([0-9]+)[ ]+([0-9]+)[ ]+([0-9]+)[ ]+([0-9]+)%[ ]+([^ ]+)\n', dic["df"])):
         disk = {}
@@ -50,33 +53,67 @@ def reg(dic):
     result["disks"] = disks
     return result
 
-sock = socket.socket()
-sock.bind(('', getPort()))
 print("Running server on %i port" % getPort())
 
-while True:
-    sock.listen(1)
-    conn, addr = sock.accept()
-    print('Connected:', addr)
-    data = conn.recv(1024)
-    if data == b'fetch':
-        out = {}
-        out["uptime"] = str(check_output("uptime"), 'utf-8')
-        out["df"] =  str(check_output("df"), 'utf-8')
-        out["ram"] =    str(check_output(["vmstat", "-s"]), 'utf-8')
-        grep =          check_output(["grep", "cpu ", "/proc/stat"])
-        out["cpu"] =    str(run(["awk", '{usage=($2+$4)*100/($2+$4+$5)} END {print usage "%"}'], stdout=PIPE, input=grep).stdout, 'utf-8')
-        conn.send(bytes(json.dumps(reg(out)), 'utf-8'))
-    elif data == b'reboot':
-        if not args.noreboot:
-            check_output(['reboot'])
-        conn.send(bytes('{"reply":"Rebooting..."}', 'utf-8'))
-    elif data == b'kill':
-        conn.send(bytes('{"reply":"Terminated by client."}', 'utf-8'))
-        break
-    elif data == b'wol-multicast':
-        conn.send(bytes('{"reply":"Sending WOL."}', 'utf-8'))
-        #TODO: Wake-On-Lan to 255.255.255.255
-    else:
-        print(data)
-conn.close()
+
+def wol(string):
+    string = re.sub(r'-', ':', string)
+    splitMac = str.split(string,':')
+    print('Sending WOL magic packet to %s' % string)
+        # Pack together the sections of the MAC address as binary hex
+    hexMac = struct.pack(b'BBBBBB', int(splitMac[0], 16),
+                             int(splitMac[1], 16),
+                             int(splitMac[2], 16),
+                             int(splitMac[3], 16),
+                             int(splitMac[4], 16),
+                             int(splitMac[5], 16))
+    packet = '\xff' * 6 + string * 16 #create the magic packet from MAC address
+    s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.sendto(bytes(packet, 'utf-8'),('255.255.255.255', 65535))
+    s.close()
+
+
+class SrvHandler(asyncore.dispatcher_with_send):
+
+    def handle_read(self):
+        data = self.recv(512)
+        if data == b'fetch':
+            out = {}
+            out["uptime"] = str(check_output("uptime"), 'utf-8')
+            out["df"]     = str(check_output("df"), 'utf-8')
+            out["ram"]    = str(check_output(["vmstat", "-s"]), 'utf-8')
+            grep          = check_output(["grep", "cpu ", "/proc/stat"])
+            out["cpu"]    = str(run(["awk", '{usage=($2+$4)*100/($2+$4+$5)} END {print usage "%"}'], stdout=PIPE, input=grep).stdout, 'utf-8')
+            out["host"]   = str(check_output("hostname"), 'utf-8')
+            self.send(bytes(json.dumps(reg(out)), 'utf-8'))
+        elif data == b'reboot':
+            if not args.noreboot:
+                check_output(['reboot'])
+            self.send(bytes('{"reply":"Rebooting..."}', 'utf-8'))
+        elif data == b'kill':
+            self.send(bytes('{"reply":"Terminated by client."}', 'utf-8'))
+            exit()
+        elif re.match(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$', str(data, 'utf-8')):
+            self.send(bytes('{"reply":"Sending WOL."}', 'utf-8'))
+            wol(str(data, 'utf-8'))
+        else:
+            print(data)
+
+class MonServer(asyncore.dispatcher):
+
+    def __init__(self, host, port):
+        asyncore.dispatcher.__init__(self)
+        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.set_reuse_addr()
+        self.bind((host, port))
+        self.listen(5)
+
+    def handle_accept(self):
+        pair = self.accept()
+        if pair is not None:
+            sock, addr = pair
+            print('Incoming connection from %s' % repr(addr))
+            handler = SrvHandler(sock)
+
+server = MonServer('', getPort())
+asyncore.loop()
