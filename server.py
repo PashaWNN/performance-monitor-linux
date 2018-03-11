@@ -8,7 +8,7 @@ from pathlib import Path
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", "--port", type=int, default=-1,
                     help="Run monitoring server on a specific port")
-parser.add_argument("-n", "--no-reboot", dest='noreboot',
+parser.add_argument("-n", "--no-reboot", dest='noreboot', action='store_true',
                     help="Don't really reboot system")
 args = parser.parse_args()
 
@@ -68,7 +68,6 @@ while True:
         out["cpu"] =    str(run(["awk", '{usage=($2+$4)*100/($2+$4+$5)} END {print usage "%"}'], stdout=PIPE, input=grep).stdout, 'utf-8')
         conn.send(bytes(json.dumps(reg(out)), 'utf-8'))
     elif data == b'reboot':
-        #TODO: Reboot
         if not args.noreboot:
             check_output(['reboot'])
         conn.send(bytes('{"reply":"Rebooting..."}', 'utf-8'))
