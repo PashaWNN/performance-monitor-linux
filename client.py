@@ -64,7 +64,6 @@ class MonitorUI(QWidget):
         except socket.error:
             self.connectionLost()
         result = json.loads(str(self.sock.recv(4096), 'utf-8'))
-        print(result)
         return result
 
 
@@ -82,8 +81,7 @@ class MonitorUI(QWidget):
         info = self.send('fetch')
         self.hstLbl.setText(info['hostname'])
         self.uptLbl.setText(info['uptime'])
-        self.avgLbl.setText('Load avg.: ' + info['load_avg'] + ' Time: ' + info['time'])
-        pass
+        self.avgLbl.setText('Load avg.: %s Time: %s' % info['load_avg'], info['time'])
 
     
     def setBtnEnabled(self, en):
@@ -130,6 +128,7 @@ class MonitorUI(QWidget):
 
 
 def parseIP(string):
+# Parsing IP from string to list with IP and port. If it's not matching regex, raising exception
     if re.match(r'^([0-9A-Za-z\.]+):?(\d{0,4})$', string):
         return re.findall(r'([0-9A-Za-z\.]+):?(\d{0,4})', string)[0]
     else:
@@ -137,6 +136,8 @@ def parseIP(string):
 
 
 def checkmac(string):
+#Checking if input string is really MAC address(5 2-digit hex values, splitted with "-" or ":"
+#Returning input string if it does and raising exception if doesn't
     if re.match(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$', string):
         return string
     else:

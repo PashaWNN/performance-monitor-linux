@@ -15,6 +15,7 @@ parser.add_argument("-n", "--no-reboot", dest='noreboot', action='store_true',
 args = parser.parse_args()
 
 def getPort():
+#Getting port from config, command line arguments or assuming default port(8000)
     file = Path("config.json")
     if file.is_file():
         with open("config.json", "r") as json_file:
@@ -31,6 +32,7 @@ def getPort():
     return port
 
 def reg(dic):
+#Parsing utilites output with regular expressions
     result = {}
     result["uptime"] = re.search(r'up (.+),[ 0-9]+user', dic["uptime"]).group(1)
     result["time"] = re.search(r'([0-9+]+:[0-9+]+:[0-9]+) up', dic["uptime"]).group(1)
@@ -57,6 +59,7 @@ print("Running server on %i port" % getPort())
 
 
 def wol(string):
+#Creating and sending Wake-On-LAN magic packet
     string = re.sub(r'-', ':', string)
     splitMac = str.split(string,':')
     print('Sending WOL magic packet to %s' % string)
@@ -93,7 +96,7 @@ class SrvHandler(asyncore.dispatcher_with_send):
         elif data == b'kill':
             self.send(bytes('{"reply":"Terminated by client."}', 'utf-8'))
             exit()
-        elif re.match(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$', str(data, 'utf-8')):
+        elif re.match(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$', str(data, 'utf-8')): #If received MAC-address-like string
             self.send(bytes('{"reply":"Sending WOL."}', 'utf-8'))
             wol(str(data, 'utf-8'))
         else:
