@@ -81,7 +81,7 @@ class MonitorUI(QWidget):
         info = self.send('fetch')
         self.hstLbl.setText(info['hostname'])
         self.uptLbl.setText(info['uptime'])
-        self.avgLbl.setText('Load avg.: %s Time: %s' % info['load_avg'], info['time'])
+        self.avgLbl.setText('Load avg.: %s Time: %s' % (info['load_avg'], info['time']))
 
     
     def setBtnEnabled(self, en):
@@ -119,7 +119,7 @@ class MonitorUI(QWidget):
         string = ip[0]
         if not ip[1] == '': string += ':' + ip[1]
         self.combo.addItems([string])
-        print('Added ', string, ' to the list')
+        print('Added %s to the list' % string)
 
 
     def remCurrentServer(self):
@@ -136,7 +136,7 @@ def parseIP(string):
 
 
 def checkmac(string):
-#Checking if input string is really MAC address(5 2-digit hex values, splitted with "-" or ":"
+#Checking if input string is really MAC address(6 2-digit hex values, splitted with "-" or ":"
 #Returning input string if it does and raising exception if doesn't
     if re.match(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$', string):
         return string
