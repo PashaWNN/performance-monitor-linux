@@ -37,7 +37,7 @@ def reg(dic):
     result["uptime"] = re.search(r'up (.+),[ 0-9]+user', dic["uptime"]).group(1)
     result["time"] = re.search(r'([0-9+]+:[0-9+]+:[0-9]+) up', dic["uptime"]).group(1)
     result["load_avg"] = re.search(r'([0-9.]+, [0-9.]+, [0-9.]+)', dic["uptime"]).group(1)
-    result["cpu"] = dic["cpu"]
+    result["cpu"] = re.search(r'([0-9.]+)', dic["cpu"]).group(1)
     result["total_memory"] = re.search(r'([0-9]+) K total memory', dic["ram"]).group(1)
     result["used_memory"] = re.search(r'([0-9]+) K used memory', dic["ram"]).group(1)
     result["free_memory"] = re.search(r'([0-9]+) K free memory', dic["ram"]).group(1)
