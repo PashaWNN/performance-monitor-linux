@@ -43,6 +43,14 @@ def reg(dic):
     result["free_memory"] = re.search(r'([0-9]+) K free memory', dic["ram"]).group(1)
     result["hostname"] = dic["host"]
     disks = {}
+    traf = re.findall(r'mcast +\n +([0-9]+).+\n.+\n +([0-9]+)', dic["net"])
+    traf_rx = 0
+    traf_tx = 0
+    for t in traf:
+        traf_rx += int(t[0])
+        traf_tx += int(t[1])
+    result["net_rx"] = str(traf_rx)
+    result["net_tx"] = str(traf_tx)
     for i, m in enumerate(re.findall(r'([^ \\]+)[ ]+([0-9]+)[ ]+([0-9]+)[ ]+([0-9]+)[ ]+([0-9]+)%[ ]+([^ ]+)\n', dic["df"])):
         disk = {}
         disk["filesystem"] = m[0]
@@ -86,9 +94,10 @@ class SrvHandler(asyncore.dispatcher_with_send):
             out["df"]     = str(check_output("df"), 'utf-8')
             out["ram"]    = str(check_output(["vmstat", "-s"]), 'utf-8')
 #top -b -n 1 |grep ^Cpu
-            top          = check_output(["top", "-b", "-n", "1"])
+            top           = check_output(["top", "-b", "-n", "1"])
             out["cpu"]    = str(run(["grep", 'Cpu'], stdout=PIPE, input=top).stdout, 'utf-8')
             out["host"]   = str(check_output("hostname"), 'utf-8')
+            out["net"]    = str(check_output(["ip", "-s", "link"]), 'utf-8')
             self.send(bytes(json.dumps(reg(out)), 'utf-8'))
         elif data == b'reboot':
             if not args.noreboot:

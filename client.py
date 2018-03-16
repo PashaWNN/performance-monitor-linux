@@ -12,7 +12,11 @@ import pyqtgraph as pg
 graph = {
      'cpu': [0]*60,
      'mem': [0]*60,
+     'ntx': [0]*60,
+     'nrx': [0]*60,
     }
+curRx = 0
+curTx = 0
 
 class MonitorUI(QWidget):
   def __init__(self):
@@ -25,7 +29,7 @@ class MonitorUI(QWidget):
         print("Config saved to %s." % args.config)
     event.accept()
   def initUI(self):
-    self.setGeometry(50, 50, 415, 500)
+    self.setGeometry(50, 50, 415, 650)
     self.setWindowTitle('Monitor')
     self.combo = QComboBox(self)
     self.combo.setGeometry(5, 5, 200, 25)
@@ -39,7 +43,7 @@ class MonitorUI(QWidget):
     self.remBtn.clicked.connect(self.remCurrentServer)
 
     self.disBtn = QPushButton('Disconnect', self)
-    self.disBtn.setGeometry(5, 470, 200, 25)
+    self.disBtn.setGeometry(5, 620, 200, 25)
     self.disBtn.clicked.connect(self.disconnect)
 
     self.rebBtn = QPushButton('Reboot server', self)
@@ -72,21 +76,36 @@ class MonitorUI(QWidget):
     self.cpu.setGeometry(5, 155, 200, 200)
     self.cpu.setXRange(1, len(graph['cpu'])-1)
     self.cpu.setYRange(0, 100)
+    self.cpu.hideButtons()
     self.cpuPlot = self.cpu.plot()
 
     self.mem = pg.PlotWidget(self, name='mem_plot')
 #    self.mem.setLabel(text='RAM usage:')
     self.mem.setMouseEnabled(x=False, y=False)
-    self.mem.setGeometry(205, 155, 200, 200)
+    self.mem.setGeometry(205, 155, 205, 200)
     self.mem.setXRange(1, len(graph['mem'])-1)
     self.mem.setYRange(0, 100)
+    self.mem.hideButtons()
     self.memPlot = self.mem.plot()
+
+    self.net = pg.PlotWidget(self, name='net_plot')
+#    self.net.setLabel(text='NET usage:')
+    self.net.setMouseEnabled(x=False, y=False)
+    self.net.setGeometry(5, 380, 405, 200)
+    self.net.setXRange(1, len(graph['ntx'])-1)
+    self.nrxPlot = self.net.plot(pen='#3875d8')
+    self.ntxPlot = self.net.plot(pen='#1cb226')
 
     self.cpuLbl = QLabel('', self)
     self.cpuLbl.setGeometry(5, 360, 200, 15)
 
     self.memLbl = QLabel('', self)
     self.memLbl.setGeometry(210, 360, 200, 15)
+
+    self.nrxLbl = QLabel('', self)
+    self.nrxLbl.setGeometry(5, 580, 400, 15)
+    self.ntxLbl = QLabel('', self)
+    self.ntxLbl.setGeometry(5, 600, 400, 15)
 
     self.setBtnEnabled(False)
     self.show()
@@ -112,6 +131,8 @@ class MonitorUI(QWidget):
 
 
   def fetch(self):
+    global curRx
+    global curTx
     info = self.send('fetch')
     self.hstLbl.setText(info['hostname'])
     self.uptLbl.setText(info['uptime'])
@@ -122,6 +143,18 @@ class MonitorUI(QWidget):
     updateGraph('mem', float(info['used_memory'])/float(info['total_memory'])*100) #Update graph info about memory usage in percents
     self.cpuPlot.setData(y=graph['cpu'], clear=True)
     self.memPlot.setData(y=graph['mem'], clear=True)
+    lastRx = curRx
+    lastTx = curTx    
+    curRx = int(info['net_rx'])
+    curTx = int(info['net_tx'])
+    if not lastRx == 0:
+        updateGraph('nrx', (curRx-lastRx)/1024/1024)
+        updateGraph('ntx', (curTx-lastTx)/1024/1024)
+    self.nrxPlot.setData(y=graph['nrx'])
+    self.ntxPlot.setData(y=graph['ntx'])
+    self.net.autoRange()
+    self.nrxLbl.setText('RX speed: {0:.2f} Mbps'.format((curRx-lastRx)/1024/1024))
+    self.ntxLbl.setText('TX speed: {0:.2f} Mbps'.format((curTx-lastTx)/1024/1024))
 
   
   def setBtnEnabled(self, en):
