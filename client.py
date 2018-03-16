@@ -4,7 +4,7 @@ import sys
 import argparse
 import re
 from PyQt5.QtWidgets import (QWidget, QLabel,
-  QComboBox, QApplication, QPushButton, QInputDialog)
+  QComboBox, QApplication, QPushButton, QInputDialog, QTableWidget, QTableWidgetItem)
 from PyQt5.QtCore import QTimer
 from pathlib import Path
 import pyqtgraph as pg
@@ -29,7 +29,7 @@ class MonitorUI(QWidget):
         print("Config saved to %s." % args.config)
     event.accept()
   def initUI(self):
-    self.setGeometry(50, 50, 415, 650)
+    self.setGeometry(50, 50, 820, 615)
     self.setWindowTitle('Monitor')
     self.combo = QComboBox(self)
     self.combo.setGeometry(5, 5, 200, 25)
@@ -43,7 +43,7 @@ class MonitorUI(QWidget):
     self.remBtn.clicked.connect(self.remCurrentServer)
 
     self.disBtn = QPushButton('Disconnect', self)
-    self.disBtn.setGeometry(5, 620, 200, 25)
+    self.disBtn.setGeometry(5, 585, 200, 25)
     self.disBtn.clicked.connect(self.disconnect)
 
     self.rebBtn = QPushButton('Reboot server', self)
@@ -91,7 +91,7 @@ class MonitorUI(QWidget):
     self.net = pg.PlotWidget(self, name='net_plot')
 #    self.net.setLabel(text='NET usage:')
     self.net.setMouseEnabled(x=False, y=False)
-    self.net.setGeometry(5, 380, 405, 200)
+    self.net.setGeometry(415, 155, 400, 200)
     self.net.setXRange(1, len(graph['ntx'])-1)
     self.nrxPlot = self.net.plot(pen='#3875d8')
     self.ntxPlot = self.net.plot(pen='#1cb226')
@@ -103,10 +103,14 @@ class MonitorUI(QWidget):
     self.memLbl.setGeometry(210, 360, 200, 15)
 
     self.nrxLbl = QLabel('', self)
-    self.nrxLbl.setGeometry(5, 580, 400, 15)
+    self.nrxLbl.setGeometry(415, 360, 200, 15)
     self.ntxLbl = QLabel('', self)
-    self.ntxLbl.setGeometry(5, 600, 400, 15)
+    self.ntxLbl.setGeometry(615, 360, 200, 15)
 
+    self.dskTbl = QTableWidget(self)
+    self.dskTbl.setColumnCount(6)
+    self.dskTbl.setHorizontalHeaderLabels(['Filesystem', '1K-blocks', 'Used', 'Available', 'Use%', 'Mounted on'])
+    self.dskTbl.setGeometry(5, 380, 805, 200)   
     self.setBtnEnabled(False)
     self.show()
 
@@ -155,6 +159,14 @@ class MonitorUI(QWidget):
     self.net.autoRange()
     self.nrxLbl.setText('RX speed: {0:.2f} Mbps'.format((curRx-lastRx)/1024/1024))
     self.ntxLbl.setText('TX speed: {0:.2f} Mbps'.format((curTx-lastTx)/1024/1024))
+    self.dskTbl.setRowCount(len(info['disks']))
+    for i, d in enumerate(info['disks']):
+        self.dskTbl.setItem(i, 0, QTableWidgetItem(info['disks'][str(i)]['filesystem']))
+        self.dskTbl.setItem(i, 1, QTableWidgetItem(info['disks'][str(i)]['1k_blocks']))
+        self.dskTbl.setItem(i, 2, QTableWidgetItem(info['disks'][str(i)]['used']))
+        self.dskTbl.setItem(i, 3, QTableWidgetItem(info['disks'][str(i)]['available']))
+        self.dskTbl.setItem(i, 4, QTableWidgetItem(info['disks'][str(i)]['use']))
+        self.dskTbl.setItem(i, 5, QTableWidgetItem(info['disks'][str(i)]['mounted_on']))
 
   
   def setBtnEnabled(self, en):

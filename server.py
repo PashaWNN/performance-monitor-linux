@@ -51,7 +51,7 @@ def reg(dic):
         traf_tx += int(t[1])
     result["net_rx"] = str(traf_rx)
     result["net_tx"] = str(traf_tx)
-    for i, m in enumerate(re.findall(r'([^ \\]+)[ ]+([0-9]+)[ ]+([0-9]+)[ ]+([0-9]+)[ ]+([0-9]+)%[ ]+([^ ]+)\n', dic["df"])):
+    for i, m in enumerate(re.findall(r'([^ \n\\]+)[ ]+([0-9]+)[ ]+([0-9]+)[ ]+([0-9]+)[ ]+([0-9]+)%[ ]+([^ ]+)\n', dic["df"])):
         disk = {}
         disk["filesystem"] = m[0]
         disk["1k_blocks"]  = m[1]
