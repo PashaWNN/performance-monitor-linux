@@ -7,7 +7,6 @@ from PyQt5.QtWidgets import (QWidget, QLabel,
   QComboBox, QApplication, QPushButton, QInputDialog)
 from PyQt5.QtCore import QTimer
 from pathlib import Path
-import numpy as np
 import pyqtgraph as pg
 
 graph = {
