@@ -7,10 +7,12 @@ from PyQt5.QtWidgets import (QWidget, QLabel,
   QComboBox, QApplication, QPushButton, QInputDialog)
 from PyQt5.QtCore import QTimer
 from pathlib import Path
+import numpy as np
+import pyqtgraph as pg
 
 graph = {
-     'cpu': [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
-     'mem': [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,],
+     'cpu': [0]*60,
+     'mem': [0]*60,
     }
 
 class MonitorUI(QWidget):
@@ -65,6 +67,27 @@ class MonitorUI(QWidget):
     self.avgLbl = QLabel('', self)
     self.avgLbl.setGeometry(5, 135, 405, 15)
 
+    self.cpu = pg.PlotWidget(self, name='cpu_plot')
+#    self.cpu.setLabel(text='CPU usage:')
+    self.cpu.setMouseEnabled(x=False, y=False)
+    self.cpu.setGeometry(5, 155, 200, 200)
+    self.cpu.setXRange(1, len(graph['cpu'])-1)
+    self.cpu.setYRange(0, 100)
+    self.cpuPlot = self.cpu.plot()
+
+    self.mem = pg.PlotWidget(self, name='mem_plot')
+#    self.mem.setLabel(text='RAM usage:')
+    self.mem.setMouseEnabled(x=False, y=False)
+    self.mem.setGeometry(205, 155, 200, 200)
+    self.mem.setXRange(1, len(graph['mem'])-1)
+    self.mem.setYRange(0, 100)
+    self.memPlot = self.mem.plot()
+
+    self.cpuLbl = QLabel('', self)
+    self.cpuLbl.setGeometry(5, 360, 200, 15)
+
+    self.memLbl = QLabel('', self)
+    self.memLbl.setGeometry(210, 360, 200, 15)
 
     self.setBtnEnabled(False)
     self.show()
@@ -94,8 +117,12 @@ class MonitorUI(QWidget):
     self.hstLbl.setText(info['hostname'])
     self.uptLbl.setText(info['uptime'])
     self.avgLbl.setText('Load avg.: %s Time: %s' % (info['load_avg'], info['time']))
+    self.memLbl.setText('RAM usage: %sK / %sK' % (info['total_memory'], info['used_memory']))
+    self.cpuLbl.setText('CPU usage: %s%%' % (info['cpu']))
     updateGraph('cpu', float(info['cpu']))                                         #Update cpu usage graph info
     updateGraph('mem', float(info['used_memory'])/float(info['total_memory'])*100) #Update graph info about memory usage in percents
+    self.cpuPlot.setData(y=graph['cpu'], clear=True)
+    self.memPlot.setData(y=graph['mem'], clear=True)
 
   
   def setBtnEnabled(self, en):
