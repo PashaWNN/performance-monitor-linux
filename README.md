@@ -8,4 +8,9 @@ GUI Performance monitor, my student course project
 * Sending Wake-On-Lan Packet to specified MAC in server's LAN
 * Showing load average stats and uptime
 
+# Dependencies:
+* python3
+* pyqt5
+* pyqtgraph
+
 ![screenshot](https://github.com/PashaWNN/performance-monitor-linux/blob/master/scr.jpg)
