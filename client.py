@@ -188,7 +188,7 @@ class MonitorUI(QWidget):
     print('Connecting to ', text)
     self.sock = socket.socket()
     ip = parseIP(text)
-    self.sock.connect((ip[0], 9080 if ip[1]=='' else int(ip[1]) ))
+    self.sock.connect((ip[0], 8000 if ip[1]=='' else int(ip[1]) ))
     if self.sock:
       self.sock.settimeout(1)
       self.setBtnEnabled(True)
