@@ -9,6 +9,9 @@ from PyQt5.QtCore import QTimer
 from pathlib import Path
 import pyqtgraph as pg
 
+_height = 615
+_width = 820
+
 graph = {
      'cpu': [0]*60,
      'mem': [0]*60,
@@ -29,8 +32,9 @@ class MonitorUI(QWidget):
         print("Config saved to %s." % args.config)
     event.accept()
   def initUI(self):
-    self.setGeometry(50, 50, 820, 615)
+    self.setGeometry(50, 50, _width, _height)
     self.setWindowTitle('Monitor')
+    self.setFixedSize(_width, _height)
     self.combo = QComboBox(self)
     self.combo.setGeometry(5, 5, 200, 25)
     self.combo.activated[str].connect(self.onActivated)
@@ -277,4 +281,3 @@ if __name__ == '__main__':
 
   if not args.textMode:
     sys.exit(app.exec_())
-  
