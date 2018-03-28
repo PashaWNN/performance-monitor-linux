@@ -40,6 +40,7 @@ def tg_poll(bot, update):
   
 
 def tg_pass(bot, update, args):
+  """Authorization by password, specified in config"""
   global chatId
   if args[0] == config.get('password', '1234'):
     if not (chatId == 0): updater.bot.send_message(chatId, 'You\'ve been deauthorized.')
@@ -72,6 +73,8 @@ def tg_add(bot, update, args):
       update.message.reply_text('%s added to servers list.' % args[0])
     except KeyError:
       update.message.reply_text('Invalid IP address!')
+    except IndexError:
+      update.message.reply_text('You must specify IP address after "/add "')
     pass
 
 
@@ -79,6 +82,11 @@ def tg_rem(bot, update, args):
   """Remove server from the list in config['list'] dicitonary"""
   if tg_authorized(update):
     try:
+      try:
+        args[0]
+      except IndexError:
+        update.message.reply_text('You must specify server number after "/remove "')
+        return
       config.get('list', []).pop(int(args[0]))
       update.message.reply_text('Server #%i removed from the list.' % int(args[0]))
     except ValueError:

@@ -146,7 +146,7 @@ class MonitorUI(QWidget):
     self.hstLbl.setText(info['hostname'])
     self.uptLbl.setText(info['uptime'])
     self.avgLbl.setText('Load avg.: %s Time: %s' % (info['load_avg'], info['time']))
-    self.memLbl.setText('RAM usage: %sK / %sK' % (info['total_memory'], info['used_memory']))
+    self.memLbl.setText('RAM usage: %.2fM / %.2fM' % (int(info['used_memory'])/1024, int(info['total_memory'])/1024))
     info['cpu'] = 0.0
 
     updateGraph('mem', float(info['used_memory'])/float(info['total_memory'])*100) #Update graph info about memory usage in percents

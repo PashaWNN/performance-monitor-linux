@@ -1,3 +1,9 @@
+v0.3.3///
+======
+* Client improvement: divided memory usage by 1024
+* Client improvement/bugfix: now memory usage showing as used/total, not total/used
+* Bot fix: now catching IndexError when "/add" typed without argument
+
 v0.3.2
 ======
 * Client bugfix: CPU stats is correct now
