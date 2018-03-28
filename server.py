@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import socket
 import asyncore
 import json
@@ -18,9 +19,9 @@ hostname = str(check_output("hostname"), 'utf-8')
 
 def getPort():
 #Getting port from config, command line arguments or assuming default port(8000)
-    file = Path("config.json")
+    file = Path("srv_config.json")
     if file.is_file():
-        with open("config.json", "r") as json_file:
+        with open("srv_config.json", "r") as json_file:
             j = json.load(json_file)
     else:
         j = {}
@@ -39,7 +40,9 @@ def reg(dic):
     result["uptime"] = re.search(r'up (.+),[ 0-9]+user', dic["uptime"]).group(1)
     result["time"] = re.search(r'([0-9+]+:[0-9+]+:[0-9]+) up', dic["uptime"]).group(1)
     result["load_avg"] = re.search(r'([0-9.]+, [0-9.]+, [0-9.]+)', dic["uptime"]).group(1)
-    result["cpu"] = '{0:.2f}'.format(100 - float(re.search(r'([0-9.]+) id', dic["cpu"]).group(1)))
+    cpuStat = re.findall(r'^cpu +([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)', dic["cpu"])[0]
+    result["cpu_used"] = int(cpuStat[0]) + int(cpuStat[1]) + int(cpuStat[2])
+    result["cpu_free"] = int(cpuStat[3])
     result["total_memory"] = re.search(r'([0-9]+) K total memory', dic["ram"]).group(1)
     result["used_memory"] = re.search(r'([0-9]+) K used memory', dic["ram"]).group(1)
     result["free_memory"] = re.search(r'([0-9]+) K free memory', dic["ram"]).group(1)
@@ -95,9 +98,7 @@ class SrvHandler(asyncore.dispatcher_with_send):
             out["uptime"] = str(check_output("uptime"), 'utf-8')
             out["df"]     = str(check_output("df"), 'utf-8')
             out["ram"]    = str(check_output(["vmstat", "-s"]), 'utf-8')
-#top -b -n 1 |grep ^Cpu
-            top           = check_output(["top", "-b", "-n", "1"])
-            out["cpu"]    = str(run(["grep", 'Cpu'], stdout=PIPE, input=top).stdout, 'utf-8')
+            out["cpu"]    = str(check_output(("cat", '/proc/stat')), 'utf-8')
             out["host"]   = hostname
             out["net"]    = str(check_output(["ip", "-s", "link"]), 'utf-8')
             self.send(bytes(json.dumps(reg(out)), 'utf-8'))

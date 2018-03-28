@@ -181,8 +181,8 @@ def main():
   logger = logging.getLogger(__name__)
 
   parser = argparse.ArgumentParser()
-  parser.add_argument("-c", "--config", type=str, default='config.json',
-                      help="Load config from specific file.\nDefault is config.json")
+  parser.add_argument("-c", "--config", type=str, default='bot_config.json',
+                      help="Load config from specific file.\nDefault is bot_config.json")
   parser.add_argument("-s", "--set-token", dest='token', type=str, default='',
                       help='Set Telegram API token')
   args = parser.parse_args()

@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import socket
 import json
 import sys
@@ -18,8 +19,7 @@ graph = {
      'ntx': [0]*60,
      'nrx': [0]*60,
     }
-curRx = 0
-curTx = 0
+curRx, curTx, curCpu, curCpuUsed, curCpuFree = 0, 0, 0, 0, 0
 
 class MonitorUI(QWidget):
   def __init__(self):
@@ -125,7 +125,7 @@ class MonitorUI(QWidget):
     return result
 
 
-  def connectionLost():
+  def connectionLost(self):
     self.hstLbl.setText('Connection lost.')
     self.timer.stop()
 
@@ -139,21 +139,32 @@ class MonitorUI(QWidget):
   def fetch(self):
     global curRx
     global curTx
+    global curCpu
+    global curCpuFree
+    global curCpuUsed
     info = self.send('fetch')
     self.hstLbl.setText(info['hostname'])
     self.uptLbl.setText(info['uptime'])
     self.avgLbl.setText('Load avg.: %s Time: %s' % (info['load_avg'], info['time']))
     self.memLbl.setText('RAM usage: %sK / %sK' % (info['total_memory'], info['used_memory']))
-    self.cpuLbl.setText('CPU usage: %s%%' % (info['cpu']))
-    updateGraph('cpu', float(info['cpu']))                                         #Update cpu usage graph info
+    info['cpu'] = 0.0
+
     updateGraph('mem', float(info['used_memory'])/float(info['total_memory'])*100) #Update graph info about memory usage in percents
     self.cpuPlot.setData(y=graph['cpu'], clear=True)
     self.memPlot.setData(y=graph['mem'], clear=True)
-    lastRx = curRx
-    lastTx = curTx    
+    lastRx  = curRx
+    lastTx  = curTx    
+    lastCpuFree = curCpuFree
+    lastCpuUsed = curCpuUsed
+    lastCpu = curCpu
     curRx = int(info['net_rx'])
     curTx = int(info['net_tx'])
+    curCpuUsed = int(info['cpu_used'])
+    curCpuFree = int(info['cpu_free'])
+    curCpu = (curCpuFree-lastCpuFree) / (curCpuUsed-lastCpuUsed)
     if not lastRx == 0:
+        updateGraph('cpu', curCpu)
+        self.cpuLbl.setText('CPU usage: %.2f%%' % curCpu)
         updateGraph('nrx', (curRx-lastRx)/1024/1024)
         updateGraph('ntx', (curTx-lastTx)/1024/1024)
     self.nrxPlot.setData(y=graph['nrx'])
@@ -243,8 +254,8 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument("-a", "--address", type=str, default='no',
                       help="Connect to specific address instead of listed in config\nE.g. 127.0.0.1:8000")
-  parser.add_argument("-c", "--config", type=str, default='config.json',
-                      help="Load config from specific file.\nDefault is config.json")
+  parser.add_argument("-c", "--config", type=str, default='client_config.json',
+                      help="Load config from specific file.\nDefault is client_config.json")
   parser.add_argument("-t", "--text", dest='textMode', action='store_true',
                       help="Don't initialize UI, work in terminal")
   args = parser.parse_args()
