@@ -3,3 +3,4 @@ python:
   - "3.6"
 install:
   pip3 install pyqt5 pyqtgraph python-telegram-bot
+script: monitor-bot.py
