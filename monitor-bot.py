@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import socket
 import json
 import argparse
@@ -10,33 +11,40 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 chatId = 0
 TIMEOUT = 1
+PERIOD = 10.0
 
 def tg_start(bot, update):
-  update.message.reply_text('ServerMonitor v0.1 bot\nType /poll to enable polling.')
+  """Greeting"""
+  update.message.reply_text('ServerMonitor v0.2 bot\n/poll to enable polling.\n/stoppoll to disable\n'+\
+                            '/add <IP> to add server\n/remove <N> to remove server by its number in list\n'+\
+                            '/list to show list of servers\n/clear to clear list\n/save to save changes to file')
 
 
 def tg_poll(bot, update):
-  global chatId
-  global threads_stopped
-  threads_stopped = False
+  """Starts polling servers every PERIOD seconds"""
+  global chatId #Store chat ID
+  global threads_stopped #Store boolean to stop running threads
+  threads_stopped = False #Don't stop threads
   update.message.reply_text('Servers polling enabled.')
   chatId = update.message.chat.id
-  serversPoll()
+  serversPoll() #Start new thread
   
 
 
 def tg_stopPoll(bot, update):
+  """Stops polling"""
   global threads_stopped
-  serversPoll(stop=True)
-  threads_stopped = True
+  threads_stopped = True #Stop all threads
   update.message.reply_text('Stopping servers polling...')
 
 
 def tg_alarm(message):
+  """Send message to last user, entered /poll command"""
   updater.bot.send_message(chatId, message)
   
 
 def tg_add(bot, update, args):
+  """Add server to the list in config['list'] dicitonary"""
   global config
   try:
     ip = parseIP(args[0])
@@ -48,6 +56,7 @@ def tg_add(bot, update, args):
 
 
 def tg_rem(bot, update, args):
+  """Remove server from the list in config['list'] dicitonary"""
   try:
     config['list'].pop(int(args[0]))
     update.message.reply_text('Server #%i removed from the list.' % int(args[0]))
@@ -58,6 +67,7 @@ def tg_rem(bot, update, args):
 
 
 def tg_list(bot, update):
+  """Show servers list from config['list'] dicitonary"""
   string = 'List of servers to poll:\n'
   if len(config['list'])<1: 
     update.message.reply_text('There is no servers to poll.')
@@ -70,43 +80,45 @@ def tg_list(bot, update):
 
 
 def tg_clear(bot, update):
+  """Clear config['list'] dicitonary"""
   global config
   config['list'] = []
   update.message.reply_text('Servers list cleared.')
 
 
 def tg_save(bot, update):
+  """Save config dicitonary to file"""
   with open(args.config, 'w') as json_file:
     json.dump(config, json_file)
   update.message.reply_text('Config saved to file.')
 
 
 def parseIP(string):
-# Parsing IP from string to list with IP and port. If it's not matching regex, raising exception
+  """Parsing IP from string to list with IP and port. If it's not matching regex, raising exception"""
   if re.match(r'^([0-9A-Za-z\.]+):?(\d{0,4})$', string):
     return re.findall(r'([0-9A-Za-z\.]+):?(\d{0,4})', string)[0]
   else:
     raise KeyError('Invalid IP!')
 
-def serversPoll(stop=False):
+def serversPoll():
+  """Threading function to poll servers"""
   global t
   if threads_stopped:
     return
-  t = threading.Timer(10.0, serversPoll)
-  if not stop:
-    t.start()
-    for ip in config['list']:
-      try:
-        sock = socket.socket()
-        sock.settimeout(TIMEOUT)
-        sock.connect((ip[0], 8000 if ip[1]=='' else int(ip[1])))
-        sock.close()
-      except ConnectionRefusedError:
-        tg_alarm('Error connecting to %s!\nConnection refused.' % ip[0])      
-      except socket.timeout:
-        tg_alarm('Error connecting to %s!\nConnection timed out.' % ip[0])
-      except socket.gaierror:
-        tg_alarm('Error connecting to %s!\nMaybe, invalid IP?' % ip[0])
+  t = threading.Timer(PERIOD, serversPoll)
+  t.start()
+  for ip in config['list']:
+    try:
+      sock = socket.socket()
+      sock.settimeout(TIMEOUT)
+      sock.connect((ip[0], 8000 if ip[1]=='' else int(ip[1])))  #Trying to connect
+      sock.close()                                              #Disconnecting immediately if connected 
+    except ConnectionRefusedError:                              #What if port is closed
+      tg_alarm('Error connecting to %s!\nConnection refused.' % ip[0])      
+    except socket.timeout:                                      #What if time is out
+      tg_alarm('Error connecting to %s!\nConnection timed out.' % ip[0])
+    except socket.gaierror:                                     #What if IP is incorrect(e.g. octet > 255)
+      tg_alarm('Error connecting to %s!\nMaybe, invalid IP?' % ip[0])
 
 
 def main():
@@ -133,6 +145,7 @@ def main():
   updater = Updater(api_token)
   dp = updater.dispatcher
   dp.add_handler(CommandHandler("start",    tg_start))
+  dp.add_handler(CommandHandler("help",    tg_start))
   dp.add_handler(CommandHandler("poll",     tg_poll))
   dp.add_handler(CommandHandler("stoppoll", tg_stopPoll))
   dp.add_handler(CommandHandler("add",      tg_add, pass_args=True))
