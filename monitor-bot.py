@@ -17,7 +17,8 @@ def tg_start(bot, update):
   """Greeting"""
   update.message.reply_text('ServerMonitor v0.2 bot\n/poll to enable polling.\n/stoppoll to disable\n'+\
                             '/add <IP> to add server\n/remove <N> to remove server by its number in list\n'+\
-                            '/list to show list of servers\n/clear to clear list\n/save to save changes to file')
+                            '/list to show list of servers\n/clear to clear list\n/save to save changes to file'+\
+                            '/password <pass> to authorize.')
 
 
 def tg_authorized(update):
@@ -31,7 +32,6 @@ def tg_authorized(update):
 
 def tg_poll(bot, update):
   """Starts polling servers every PERIOD seconds"""
-  global chatId #Store chat ID
   global threads_stopped #Store boolean to stop running threads
   if tg_authorized(update):
     threads_stopped = False #Don't stop threads
@@ -41,8 +41,7 @@ def tg_poll(bot, update):
 
 def tg_pass(bot, update, args):
   global chatId
-  global config
-  if args[0] == config['password']:
+  if args[0] == config.get('password', '1234'):
     if not (chatId == 0): updater.bot.send_message(chatId, 'You\'ve been deauthorized.')
     chatId = update.message.chat.id
     update.message.reply_text('You\'re successfully authorized!\nType /poll to start polling servers.')
@@ -80,7 +79,7 @@ def tg_rem(bot, update, args):
   """Remove server from the list in config['list'] dicitonary"""
   if tg_authorized(update):
     try:
-      config['list'].pop(int(args[0]))
+      config.get('list', []).pop(int(args[0]))
       update.message.reply_text('Server #%i removed from the list.' % int(args[0]))
     except ValueError:
       update.message.reply_text('Please enter number of server.')
@@ -113,8 +112,7 @@ def tg_clear(bot, update):
 def tg_save(bot, update):
   """Save config dicitonary to file"""
   if tg_authorized(update):
-    with open(args.config, 'w') as json_file:
-      json.dump(config, json_file)
+    saveConfig()
     update.message.reply_text('Config saved to file.')
 
 
@@ -130,12 +128,12 @@ def serversPoll():
   global t
   if threads_stopped:
     return
-  t = threading.Timer(PERIOD, serversPoll)
+  t = threading.Timer(float(config.get('period', PERIOD)), serversPoll)
   t.start()
   for ip in config['list']:
     try:
       sock = socket.socket()
-      sock.settimeout(TIMEOUT)
+      sock.settimeout(int(config.get('timeout', TIMEOUT)))
       sock.connect((ip[0], 8000 if ip[1]=='' else int(ip[1])))  #Trying to connect
       sock.close()                                              #Disconnecting immediately if connected 
     except ConnectionRefusedError:                              #What if port is closed
@@ -144,6 +142,34 @@ def serversPoll():
       tg_alarm('Error connecting to %s!\nConnection timed out.' % ip[0])
     except socket.gaierror:                                     #What if IP is incorrect(e.g. octet > 255)
       tg_alarm('Error connecting to %s!\nMaybe, invalid IP?' % ip[0])
+
+
+def saveConfig():
+  with open(args.config, 'w') as json_file:
+      json.dump(config, json_file)
+  print("Config saved.")
+
+
+def loadConfig():
+  global config
+  file = Path(args.config)
+  if file.is_file():
+    with open(args.config, "r") as json_file:
+      try:
+        config = json.load(json_file)
+        print("Config loaded from %s" % args.config)
+        try:
+          config['list']
+        except KeyError:
+          config['list'] = []
+      except json.decoder.JSONDecodeError:
+        print("Error parsing JSON. No config loaded")
+        config = {}
+        config['list'] = []
+  else: 
+    print("Error reading config file!")
+    config = {}
+    config['list'] = []
 
 
 def main():
@@ -157,20 +183,24 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument("-c", "--config", type=str, default='config.json',
                       help="Load config from specific file.\nDefault is config.json")
+  parser.add_argument("-s", "--set-token", dest='token', type=str, default='',
+                      help='Set Telegram API token')
   args = parser.parse_args()
-  file = Path(args.config)
-  if file.is_file():
-    with open(args.config, "r") as json_file:
-      config = json.load(json_file)
-      print("Config loaded from %s" % args.config)
-  else: 
-    print("Error loading config file!")
-    return
-  api_token = config['api_token']
+  loadConfig()
+  api_token = config.get('api_token', None)
+  if not (args.token == ''):
+    api_token = args.token
+    config['api_token'] = api_token
+    saveConfig()
+  if not api_token:
+    if (args.token == ''):
+      print("Error initializing API: No API Token in config file.\nAsk @BotFather for it and use --set-token argument.")
+      return
+      
   updater = Updater(api_token)
   dp = updater.dispatcher
   dp.add_handler(CommandHandler("start",    tg_start))
-  dp.add_handler(CommandHandler("help",    tg_start))
+  dp.add_handler(CommandHandler("help",     tg_start))
   dp.add_handler(CommandHandler("poll",     tg_poll))
   dp.add_handler(CommandHandler("stoppoll", tg_stopPoll))
   dp.add_handler(CommandHandler("add",      tg_add, pass_args=True))
@@ -178,7 +208,7 @@ def main():
   dp.add_handler(CommandHandler("remove",   tg_rem, pass_args=True))
   dp.add_handler(CommandHandler("clear",    tg_clear))
   dp.add_handler(CommandHandler("save",     tg_save))
-  dp.add_handler(CommandHandler("password",   tg_pass, pass_args=True))
+  dp.add_handler(CommandHandler("password", tg_pass, pass_args=True))
   updater.start_polling()
   updater.idle()
 
