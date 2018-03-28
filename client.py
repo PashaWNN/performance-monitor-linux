@@ -75,7 +75,6 @@ class MonitorUI(QWidget):
     self.avgLbl.setGeometry(5, 135, 405, 15)
 
     self.cpu = pg.PlotWidget(self, name='cpu_plot')
-#    self.cpu.setLabel(text='CPU usage:')
     self.cpu.setMouseEnabled(x=False, y=False)
     self.cpu.setGeometry(5, 155, 200, 200)
     self.cpu.setXRange(1, len(graph['cpu'])-1)
@@ -84,7 +83,6 @@ class MonitorUI(QWidget):
     self.cpuPlot = self.cpu.plot()
 
     self.mem = pg.PlotWidget(self, name='mem_plot')
-#    self.mem.setLabel(text='RAM usage:')
     self.mem.setMouseEnabled(x=False, y=False)
     self.mem.setGeometry(205, 155, 205, 200)
     self.mem.setXRange(1, len(graph['mem'])-1)
@@ -93,7 +91,6 @@ class MonitorUI(QWidget):
     self.memPlot = self.mem.plot()
 
     self.net = pg.PlotWidget(self, name='net_plot')
-#    self.net.setLabel(text='NET usage:')
     self.net.setMouseEnabled(x=False, y=False)
     self.net.setGeometry(415, 155, 400, 200)
     self.net.setXRange(1, len(graph['ntx'])-1)
@@ -117,6 +114,7 @@ class MonitorUI(QWidget):
     self.dskTbl.setGeometry(5, 380, 805, 200)   
     self.setBtnEnabled(False)
     self.show()
+
 
   def send(self, message):
     try:

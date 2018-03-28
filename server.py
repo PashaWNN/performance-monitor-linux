@@ -14,6 +14,8 @@ parser.add_argument("-n", "--no-reboot", dest='noreboot', action='store_true',
                     help="Don't really reboot system")
 args = parser.parse_args()
 
+hostname = str(check_output("hostname"), 'utf-8')
+
 def getPort():
 #Getting port from config, command line arguments or assuming default port(8000)
     file = Path("config.json")
@@ -96,7 +98,7 @@ class SrvHandler(asyncore.dispatcher_with_send):
 #top -b -n 1 |grep ^Cpu
             top           = check_output(["top", "-b", "-n", "1"])
             out["cpu"]    = str(run(["grep", 'Cpu'], stdout=PIPE, input=top).stdout, 'utf-8')
-            out["host"]   = str(check_output("hostname"), 'utf-8')
+            out["host"]   = hostname
             out["net"]    = str(check_output(["ip", "-s", "link"]), 'utf-8')
             self.send(bytes(json.dumps(reg(out)), 'utf-8'))
         elif data == b'reboot':
