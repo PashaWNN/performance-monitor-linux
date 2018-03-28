@@ -20,15 +20,34 @@ def tg_start(bot, update):
                             '/list to show list of servers\n/clear to clear list\n/save to save changes to file')
 
 
+def tg_authorized(update):
+  global chatId
+  if not (chatId == update.message.chat.id):
+    update.message.reply_text('You are not authorized. Type /password <pass> to authorize.')
+    return False
+  else:
+    return True
+
+
 def tg_poll(bot, update):
   """Starts polling servers every PERIOD seconds"""
   global chatId #Store chat ID
   global threads_stopped #Store boolean to stop running threads
-  threads_stopped = False #Don't stop threads
-  update.message.reply_text('Servers polling enabled.')
-  chatId = update.message.chat.id
-  serversPoll() #Start new thread
+  if tg_authorized(update):
+    threads_stopped = False #Don't stop threads
+    update.message.reply_text('Servers polling enabled.')
+    serversPoll() #Start new thread
   
+
+def tg_pass(bot, update, args):
+  global chatId
+  global config
+  if args[0] == config['password']:
+    if not (chatId == 0): updater.bot.send_message(chatId, 'You\'ve been deauthorized.')
+    chatId = update.message.chat.id
+    update.message.reply_text('You\'re successfully authorized!\nType /poll to start polling servers.')
+  else:
+    update.message.reply_text('Password incorrect!')
 
 
 def tg_stopPoll(bot, update):
@@ -40,57 +59,63 @@ def tg_stopPoll(bot, update):
 
 def tg_alarm(message):
   """Send message to last user, entered /poll command"""
-  updater.bot.send_message(chatId, message)
+  if not (chatId == 0):
+    updater.bot.send_message(chatId, message)
   
 
 def tg_add(bot, update, args):
   """Add server to the list in config['list'] dicitonary"""
   global config
-  try:
-    ip = parseIP(args[0])
-    config['list'].append(ip)
-    update.message.reply_text('%s added to servers list.' % args[0])
-  except KeyError:
-    update.message.reply_text('Invalid IP address!')
-  pass
+  if tg_authorized(update):
+    try:
+      ip = parseIP(args[0])
+      config['list'].append(ip)
+      update.message.reply_text('%s added to servers list.' % args[0])
+    except KeyError:
+      update.message.reply_text('Invalid IP address!')
+    pass
 
 
 def tg_rem(bot, update, args):
   """Remove server from the list in config['list'] dicitonary"""
-  try:
-    config['list'].pop(int(args[0]))
-    update.message.reply_text('Server #%i removed from the list.' % int(args[0]))
-  except ValueError:
-    update.message.reply_text('Please enter number of server.')
-  except IndexError:
-    update.message.reply_text('Index out of list range.')
+  if tg_authorized(update):
+    try:
+      config['list'].pop(int(args[0]))
+      update.message.reply_text('Server #%i removed from the list.' % int(args[0]))
+    except ValueError:
+      update.message.reply_text('Please enter number of server.')
+    except IndexError:
+      update.message.reply_text('Index out of list range.')
 
 
 def tg_list(bot, update):
   """Show servers list from config['list'] dicitonary"""
-  string = 'List of servers to poll:\n'
-  if len(config['list'])<1: 
-    update.message.reply_text('There is no servers to poll.')
-  else:
-    for i, ip in enumerate(config['list']):
-      s = ip[0]
-      if not ip[1]=='': s += ':' + ip[1]
-      string+='%i) %s\n' % (i, s)
-    update.message.reply_text(string)
+  if tg_authorized(update):
+    string = 'List of servers to poll:\n'
+    if len(config['list'])<1: 
+      update.message.reply_text('There is no servers to poll.')
+    else:
+      for i, ip in enumerate(config['list']):
+        s = ip[0]
+        if not ip[1]=='': s += ':' + ip[1]
+        string+='%i) %s\n' % (i, s)
+      update.message.reply_text(string)
 
 
 def tg_clear(bot, update):
   """Clear config['list'] dicitonary"""
   global config
-  config['list'] = []
-  update.message.reply_text('Servers list cleared.')
+  if tg_authorized(update):
+    config['list'] = []
+    update.message.reply_text('Servers list cleared.')
 
 
 def tg_save(bot, update):
   """Save config dicitonary to file"""
-  with open(args.config, 'w') as json_file:
-    json.dump(config, json_file)
-  update.message.reply_text('Config saved to file.')
+  if tg_authorized(update):
+    with open(args.config, 'w') as json_file:
+      json.dump(config, json_file)
+    update.message.reply_text('Config saved to file.')
 
 
 def parseIP(string):
@@ -153,6 +178,7 @@ def main():
   dp.add_handler(CommandHandler("remove",   tg_rem, pass_args=True))
   dp.add_handler(CommandHandler("clear",    tg_clear))
   dp.add_handler(CommandHandler("save",     tg_save))
+  dp.add_handler(CommandHandler("password",   tg_pass, pass_args=True))
   updater.start_polling()
   updater.idle()
 
