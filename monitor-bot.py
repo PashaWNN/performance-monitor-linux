@@ -9,7 +9,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 
 chatId = 0
-
+TIMEOUT = 1
 
 def tg_start(bot, update):
   update.message.reply_text('ServerMonitor v0.1 bot\nType /poll to enable polling.')
@@ -17,13 +17,18 @@ def tg_start(bot, update):
 
 def tg_poll(bot, update):
   global chatId
+  global threads_stopped
+  threads_stopped = False
   update.message.reply_text('Servers polling enabled.')
   chatId = update.message.chat.id
   serversPoll()
+  
 
 
 def tg_stopPoll(bot, update):
+  global threads_stopped
   serversPoll(stop=True)
+  threads_stopped = True
   update.message.reply_text('Stopping servers polling...')
 
 
@@ -84,10 +89,25 @@ def parseIP(string):
     raise KeyError('Invalid IP!')
 
 def serversPoll(stop=False):
+  global t
+  if threads_stopped:
+    return
+  t = threading.Timer(10.0, serversPoll)
   if not stop:
-    threading.Timer(5.0, serversPoll).start()
-  #TODO:polling servers
-  tg_alarm('Test')
+    t.start()
+    for ip in config['list']:
+      try:
+        sock = socket.socket()
+        sock.settimeout(TIMEOUT)
+        sock.connect((ip[0], 8000 if ip[1]=='' else int(ip[1])))
+        sock.close()
+      except ConnectionRefusedError:
+        tg_alarm('Error connecting to %s!\nConnection refused.' % ip[0])      
+      except socket.timeout:
+        tg_alarm('Error connecting to %s!\nConnection timed out.' % ip[0])
+      except socket.gaierror:
+        tg_alarm('Error connecting to %s!\nMaybe, invalid IP?' % ip[0])
+
 
 def main():
   global updater
@@ -114,15 +134,12 @@ def main():
   dp = updater.dispatcher
   dp.add_handler(CommandHandler("start",    tg_start))
   dp.add_handler(CommandHandler("poll",     tg_poll))
-  dp.add_handler(CommandHandler("stopPoll", tg_stopPoll))
+  dp.add_handler(CommandHandler("stoppoll", tg_stopPoll))
   dp.add_handler(CommandHandler("add",      tg_add, pass_args=True))
   dp.add_handler(CommandHandler("list",     tg_list))
   dp.add_handler(CommandHandler("remove",   tg_rem, pass_args=True))
   dp.add_handler(CommandHandler("clear",    tg_clear))
-#                                pass_job_queue=True,
-#                                pass_chat_data=True))
-#  dp.add_handler(MessageHandler(Filters.text, echo))
-#  dp.add_error_handler(error)
+  dp.add_handler(CommandHandler("save",     tg_save))
   updater.start_polling()
   updater.idle()
 
