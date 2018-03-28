@@ -5,4 +5,3 @@ install:
   pip3 install pyqt5
   pip3 install pyqtgraph
   pip3 install python-telegram-bot --upgrade
-script: pytest
