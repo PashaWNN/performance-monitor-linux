@@ -2,6 +2,4 @@ language: python
 python:
   - "3.6"
 install:
-  pip3 install pyqt5
-  pip3 install pyqtgraph
-  pip3 install python-telegram-bot --upgrade
+  pip3 install pyqt5 pyqtgraph python-telegram-bot
