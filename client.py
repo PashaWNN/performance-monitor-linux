@@ -282,7 +282,7 @@ if __name__ == '__main__':
       print('Connected.')
       string = input('Enter command(fetch, reboot, kill or WOL MAC addr): ')
       sock.send(bytes(string, 'utf-8'))
-      result = json.loads(str(sock.recv(4096), 'utf-8'))
+      result = str(sock.recv(4096), 'utf-8')
       sock.close()
       print(result)
     else:

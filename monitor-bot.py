@@ -17,8 +17,8 @@ def tg_start(bot, update):
   """Greeting"""
   update.message.reply_text('ServerMonitor v0.2 bot\n/poll to enable polling.\n/stoppoll to disable\n'+\
                             '/add <IP> to add server\n/remove <N> to remove server by its number in list\n'+\
-                            '/list to show list of servers\n/clear to clear list\n/save to save changes to file'+\
-                            '/password <pass> to authorize.')
+                            '/list to show list of servers\n/clear to clear list\n/save to save changes to file\n'+\
+                            '/password <pass> to authorize\n/setpassword <newpass> to change password.')
 
 
 def tg_authorized(update):
@@ -75,7 +75,13 @@ def tg_add(bot, update, args):
       update.message.reply_text('Invalid IP address!')
     except IndexError:
       update.message.reply_text('You must specify IP address after "/add "')
-    pass
+
+
+def tg_set_pass(bot, update, args):
+  global config
+  if tg_authorized(update) and (len(args) == 1):
+    config['password'] = args[0]
+    update.message.reply_text('Password successfully changed!')
 
 
 def tg_rem(bot, update, args):
@@ -217,6 +223,7 @@ def main():
   dp.add_handler(CommandHandler("clear",    tg_clear))
   dp.add_handler(CommandHandler("save",     tg_save))
   dp.add_handler(CommandHandler("password", tg_pass, pass_args=True))
+  dp.add_handler(CommandHandler("setpassword", tg_set_pass, pass_args=True))
   updater.start_polling()
   updater.idle()
 
